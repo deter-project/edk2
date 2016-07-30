@@ -12,6 +12,9 @@
 #
 ##
 
+[BuildOptions]
+  GCC:*_*_X64_CC_FLAGS   = -fno-PIC
+
 [Defines]
   PLATFORM_NAME               = DeterAll
   #versioned identifier for the deter platform (when ver changes this increments)
@@ -25,6 +28,7 @@
 
 [LibraryClasses]
   UefiApplicationEntryPoint|MdePkg/Library/UefiApplicationEntryPoint/UefiApplicationEntryPoint.inf
+  ShellCEntryLib|ShellPkg/Library/UefiShellCEntryLib/UefiShellCEntryLib.inf
   UefiLib|MdePkg/Library/UefiLib/UefiLib.inf
   PrintLib|MdePkg/Library/BasePrintLib/BasePrintLib.inf
   PcdLib|MdePkg/Library/BasePcdLibNull/BasePcdLibNull.inf
@@ -37,6 +41,27 @@
   DevicePathLib|MdePkg/Library/UefiDevicePathLib/UefiDevicePathLib.inf
   UefiRuntimeServicesTableLib|MdePkg/Library/UefiRuntimeServicesTableLib/UefiRuntimeServicesTableLib.inf
   DebugPrintErrorLevelLib|MdePkg/Library/BaseDebugPrintErrorLevelLib/BaseDebugPrintErrorLevelLib.inf  
+  #LibC|StdLib/LibC/LibC.inf
+  Stdio|StdLib/LibC/Stdio/Stdio.inf
+  DxeServicesLib|MdePkg/Library/DxeServicesLib/DxeServicesLib.inf
+  #LibCType|StdLib/LibC/Ctype/Ctype.inf
+  #LibGdtoa|StdLib/LibC/gdtoa/gdtoa.inf
+  #LibLocale|StdLib/LibC/Locale/Locale.inf
+  #LibStdLib|StdLib/LibC/StdLib/StdLib.inf
+  #LibString|StdLib/LibC/String/String.inf
+  #LibTime|StdLib/LibC/Time/Time.inf
+  #LibUefi|StdLib/LibC/Uefi/Uefi.inf
+  #LibWchar|StdLib/LibC/Wchar/Wchar.inf
+  ShellLib|ShellPkg/Library/UefiShellLib/UefiShellLib.inf
+  #LibGen|StdLib/PosixLib/Gen/LibGen.inf
+  #DevUtility|StdLib/LibC/Uefi/Devices/daUtility.inf
+  #LibStdio|StdLib/LibC/Stdio/Stdio.inf
+  FileHandleLib|MdePkg/Library/UefiFileHandleLib/UefiFileHandleLib.inf  
+  HiiLib|MdeModulePkg/Library/UefiHiiLib/UefiHiiLib.inf
+  SortLib|MdeModulePkg/Library/UefiSortLib/UefiSortLib.inf
+  UefiHiiServicesLib|MdeModulePkg/Library/UefiHiiServicesLib/UefiHiiServicesLib.inf
+  UefiRuntimeLib|MdePkg/Library/UefiRuntimeLib/UefiRuntimeLib.inf
+  UefiDriverEntryPoint|MdePkg/Library/UefiDriverEntryPoint/UefiDriverEntryPoint.inf
 
 [SkuIds]
   0|DEFAULT
@@ -45,3 +70,5 @@
 
 [Components]
   DeterPkg/Application/QuickJump/QuickJump.inf
+
+!include StdLib/StdLib.inc

@@ -15,13 +15,13 @@
 ##
 
 [Defines]
-  INF_VERSION                   = 0x00010005
+  INF_VERSION                   = 0x00010006
   BASE_NAME                     = QuickJump
   MODULE_UNI_FILE               = QuickJump.uni
   FILE_GUID                     = b415592e-561b-11e6-91ce-cfa5636ca62a
   MODULE_TYPE                   = UEFI_APPLICATION
   VERSION_STRING                = 0.1
-  ENTRY_POINT                   = UefiMain
+  ENTRY_POINT                   = ShellCEntryLib
 
   UEFI_HII_RESOURCE_SECTION     = TRUE
 
@@ -29,10 +29,17 @@
   QuickJump.c
 
 [Packages]
-  DeterPkg/DeterPkg.dec
+#  DeterPkg/DeterPkg.dec
   MdePkg/MdePkg.dec
+  StdLib/StdLib.dec
+  ShellPkg/ShellPkg.dec
 
 [LibraryClasses]
-  UefiApplicationEntryPoint
+#  UefiApplicationEntryPoint
+  ShellCEntryLib
   UefiLib
+  LibC
+  Stdio
+#  DevShell
+#  DxeServicesLib
   

@@ -16,15 +16,24 @@
 
 #include <Uefi.h>
 #include <Library/UefiLib.h>
-#include <Library/UefiApplicationEntryPoint.h>
+//#include <Library/UefiApplicationEntryPoint.h>
+#include <Library/ShellCEntryLib.h>
 
-EFI_STATUS
-EFIAPI
-UefiMain (
-  IN EFI_HANDLE         ImageHandle,
-  IN EFI_SYSTEM_TABLE   *SystemTable ) 
+//image
+#include <stdio.h>
+/*
+#include <Pi/PiFirmwareFile.h>
+#include <protocol/graphicsoutput.h>
+#include <IndustryStandard/Bmp.h>
+#include <Library/BaseLib.h>
+#include <Library/UefiBootServicesTableLib.h>
+#include <Library/DxeServicesLib.h>
+*/
+
+int main(int argc, char **argv)
 {
-  Print(L"Deter Quick Boot!\n");
+  //Print(L"Deter Quick Boot!\n");
+  printf("Deter Quick Booooot!\n");
   return EFI_SUCCESS;
 }
 
