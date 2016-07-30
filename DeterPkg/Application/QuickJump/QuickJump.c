@@ -30,10 +30,38 @@
 #include <Library/DxeServicesLib.h>
 */
 
+#include <Library/UefiBootServicesTableLib.h>
+#include <FrameworkDxe.h>
+#include <Library/DxeServicesLib.h>
+
+void showLogo();
+
 int main(int argc, char **argv)
 {
-  //Print(L"Deter Quick Boot!\n");
   printf("Deter Quick Booooot!\n");
+  showLogo();
+
   return EFI_SUCCESS;
 }
 
+void showLogo()
+{
+  //get a handle to the graphics output protocol
+  EFI_GRAPHICS_OUTPUT_PROTOCOL  *GraphicsOutput;
+  EFI_STATUS status = gBS->HandleProtocol(
+      gST->ConsoleOutHandle,
+      &gEfiGraphicsOutputProtocolGuid,
+      (VOID**) &GraphicsOutput);
+
+  if(EFI_ERROR(status)) { return; }
+
+
+  //get the deter logo from the firmware volume
+  UINT8 *ImageData;
+  UINTN ImageSize;
+  status = GetSectionFromAnyFv(
+      PcdGetPtr(PcdLogoFile),
+      EFI_SECTION_RAW,
+      0, //read from the first section of the file
+      (VOID**) &ImageData, &ImageSize);
+}
