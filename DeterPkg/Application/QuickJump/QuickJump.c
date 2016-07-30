@@ -24,7 +24,7 @@ UefiMain (
   IN EFI_HANDLE         ImageHandle,
   IN EFI_SYSTEM_TABLE   *SystemTable ) 
 {
-  Print((CHAR16*)"Deter Quick Boot!");
+  Print(L"Deter Quick Boot!\n");
   return EFI_SUCCESS;
 }
 
