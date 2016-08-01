@@ -21,7 +21,7 @@
   FILE_GUID                     = b415592e-561b-11e6-91ce-cfa5636ca62a
   MODULE_TYPE                   = UEFI_APPLICATION
   VERSION_STRING                = 0.1
-  ENTRY_POINT                   = ShellCEntryLib
+  ENTRY_POINT                   = QuickJumpEntry
 
   UEFI_HII_RESOURCE_SECTION     = TRUE
 
@@ -32,19 +32,24 @@
   DeterPkg/DeterPkg.dec
   MdePkg/MdePkg.dec
   StdLib/StdLib.dec
-  ShellPkg/ShellPkg.dec
+# ShellPkg/ShellPkg.dec
   IntelFrameworkPkg/IntelFrameworkPkg.dec
 
 [LibraryClasses]
-#  UefiApplicationEntryPoint
+# UefiApplicationEntryPoint
   ShellCEntryLib
   UefiLib
   LibC
   Stdio
   FrameworkUefiLib
+  ShellCEntryLib
+  UefiBootServicesTableLib
   DxeServicesLib
-#  DevShell
-#  DxeServicesLib
+# DevShell
+# DxeServicesLib
+
+[Protocols]
+  gEfiGraphicsOutputProtocolGuid 
 
 [Pcd]
  gDeterPkgTokenSpaceGuid.PcdLogoFile 

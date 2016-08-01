@@ -13,7 +13,7 @@
 ##
 
 [BuildOptions]
-  GCC:*_*_X64_CC_FLAGS   = -fno-PIC
+  GCC:*_*_X64_CC_FLAGS   = -fno-PIC -fdiagnostics-color=always
 
 [Defines]
   PLATFORM_NAME               = DeterAll
