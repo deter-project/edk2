@@ -26,6 +26,7 @@
   @retval EFI_OUT_OF_RESOURCES  No enough buffer to allocate.
 
 **/
+
 EFI_STATUS
 ConvertBmpToGopBlt (
   IN     VOID      *BmpImage,
@@ -33,7 +34,8 @@ ConvertBmpToGopBlt (
   IN OUT VOID      **GopBlt,
   IN OUT UINTN     *GopBltSize,
      OUT UINTN     *PixelHeight,
-     OUT UINTN     *PixelWidth
+     OUT UINTN     *PixelWidth,
+     OUT UINTN     *BmpError
   )
 {
   UINT8                         *Image;
@@ -58,6 +60,7 @@ ConvertBmpToGopBlt (
   BmpHeader = (BMP_IMAGE_HEADER *) BmpImage;
 
   if (BmpHeader->CharB != 'B' || BmpHeader->CharM != 'M') {
+    *BmpError = BMP_BAD_CHAR;
     return EFI_UNSUPPORTED;
   }
 
@@ -65,6 +68,7 @@ ConvertBmpToGopBlt (
   // Doesn't support compress.
   //
   if (BmpHeader->CompressionType != 0) {
+    *BmpError = BMP_NO_COMPRESSION;
     return EFI_UNSUPPORTED;
   }
 
@@ -73,6 +77,7 @@ ConvertBmpToGopBlt (
   // BITMAPFILEHEADER + BITMAPINFOHEADER = BMP_IMAGE_HEADER
   //
   if (BmpHeader->HeaderSize != sizeof (BMP_IMAGE_HEADER) - OFFSET_OF(BMP_IMAGE_HEADER, HeaderSize)) {
+    *BmpError = BMP_BAD_HEADER;
     return EFI_UNSUPPORTED;
   }
 

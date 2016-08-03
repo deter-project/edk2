@@ -14,6 +14,10 @@
  * stolen from IntelFrameworkModulePkg/Library/GenericBdsLib/BdsConsole.c
  */
 
+#define BMP_BAD_CHAR 600
+#define BMP_NO_COMPRESSION 601
+#define BMP_BAD_HEADER 602
+
 EFI_STATUS
 ConvertBmpToGopBlt (
   IN     VOID      *BmpImage,
@@ -21,5 +25,6 @@ ConvertBmpToGopBlt (
   IN OUT VOID      **GopBlt,
   IN OUT UINTN     *GopBltSize,
      OUT UINTN     *PixelHeight,
-     OUT UINTN     *PixelWidth
+     OUT UINTN     *PixelWidth,
+     OUT UINTN     *BmpError
   );

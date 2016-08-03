@@ -33,13 +33,18 @@
 #include <Burgaler.h>
 
 void locateGraphics();
+void maxRes();
 void showLogo();
 void run();
 void initTop();
-//void initConsole();
   
 EFI_GRAPHICS_OUTPUT_PROTOCOL  *gop = NULL;
+UINT32 mode_width = 0,
+       mode_height = 0;
+
 EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *top = NULL;
+UINTN text_cols = 0,
+      text_rows = 0;
 
 EFI_STATUS
 EFIAPI
@@ -50,43 +55,21 @@ QuickJumpEntry(
   gST->ConOut->ClearScreen (gST->ConOut);
   initTop();
   locateGraphics();
+  maxRes();
   showLogo();
   run();
-  //initConsole();
 
   return EFI_SUCCESS;
 }
 
 
-/*
-void initConsole()
-{
-  EFI_STATUS status = gBS->LocateProtocol(
-      &gEfiConsoleControlProtocolGuid,
-      NULL,
-      (VOID**), &ccp);
-
-  if(status == EFI_SUCCESS)
-  {
-    printf("ccp found, yay!\n");
-    ccp->SetMode(ccp, EfiConsoleControlScreenGraphics);
-  }
-  else if(status == EFI_INVALID_PARAMETER)
-  {
-    printf("ccp locate: invalid param\n");
-  }
-  else if(status == EFI_NOT_FOUND)
-  {
-    printf("ccp locate: not found, :(\n");
-  }
-
-}
-*/
-
-int row = 3;
+int row = 1;
 void printMsg(const CHAR16 *msg)
 {
-  gST->ConOut->SetCursorPosition(gST->ConOut, 7, row++);
+  UINTN sl = StrLen(msg);
+  gST->ConOut->SetCursorPosition(gST->ConOut, 0, text_rows - 1);
+  Print(L"                                                                  ");
+  gST->ConOut->SetCursorPosition(gST->ConOut, text_cols/2 - sl/2 - 1, text_rows - 1);
   Print(msg);
 }
 
@@ -106,9 +89,10 @@ void initTop()
   printMsg(L"TOP initailized");
 }
 
+
 void locateGraphics()
 {
-  printMsg(L"locating the gop\n");
+  //printMsg(L"locating the gop\n");
 
   EFI_STATUS status = gBS->LocateProtocol(
       &gEfiGraphicsOutputProtocolGuid,
@@ -116,67 +100,50 @@ void locateGraphics()
       (VOID**) &gop);
   if(status == EFI_SUCCESS)
   {
-    printMsg(L"gop found, yay!\n");
+    //printMsg(L"gop found, yay!\n");
+    //gop->SetMode(gop, gop->Mode->MaxMode);
   }
   else if(status == EFI_INVALID_PARAMETER)
   {
-    printMsg(L"invalid param\n");
+    //printMsg(L"invalid param\n");
   }
   else if(status == EFI_NOT_FOUND)
   {
-    printMsg(L"gop not found, :(\n");
+    //printMsg(L"gop not found, :(\n");
   }
 }
 
+void maxRes()
+{
+  int mode = gop->Mode->Mode;
+  for(int i = 0; i < gop->Mode->MaxMode; i++)
+  {
+    EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *info;
+    UINTN info_sz;
+    UINTN px = 0;
+
+    gop->QueryMode(gop, i, &info_sz, &info);
+    if(info->PixelsPerScanLine > px)
+    {
+      px = info->PixelsPerScanLine;
+      mode = i;
+    }
+  }
+  gop->SetMode(gop, mode);
+  top->SetMode(top, mode);
+    
+  mode_width = gop->Mode->Info->HorizontalResolution,
+  mode_height = gop->Mode->Info->VerticalResolution;
+
+  top->QueryMode(top, mode, &text_cols, &text_rows);
+}
 
 void showLogo()
 {
 
-  //get a handle to the graphics output protocol
-  EFI_STATUS status = gBS->HandleProtocol(
-      gST->ConsoleOutHandle,
-      &gEfiGraphicsOutputProtocolGuid,
-      (VOID**) &gop);
-
-  if(EFI_ERROR(status)) 
-  {
-    printMsg(L"GOP not supported");
-    if(status == EFI_INVALID_PARAMETER)
-    {
-      printMsg(L"gop: invalid param\n");
-    }
-    if(status == EFI_NOT_FOUND)
-    {
-      printMsg(L"gop: not found, :(\n");
-    }
-    //return;
-  }
-  else
-  {
-    printMsg(L"GOP initailized");
-  }
-
-  printMsg(L"getting logo from firmware");
-  //get the deter logo from the firmware volume
-  /*
-  UINT8 *ImageData;
-  UINTN ImageSize;
-  status = GetSectionFromAnyFv(
-      PcdGetPtr(PcdLogoFile),
-      EFI_SECTION_RAW,
-      0, //read from the first section of the file
-      (VOID**) &ImageData, &ImageSize);
-
-  if(EFI_ERROR(status))
-  {
-    printMsg(L"could not read logo from firmware volume");
-    return;
-  }
-  */
-
   //open logo file
   SHELL_FILE_HANDLE fh;
-  status = ShellOpenFileByName(
+  EFI_STATUS status = ShellOpenFileByName(
       L"deter.bmp",
       &fh,
       EFI_FILE_MODE_READ,
@@ -206,6 +173,7 @@ void showLogo()
     return;
   }
 
+  ShellCloseFile(&fh);
   printMsg(L"read logo file into buffer");
 
   VOID *gopBlt = NULL;
@@ -213,24 +181,53 @@ void showLogo()
   UINTN logoHeight = 0,
         logoWidth = 0;
 
+  UINTN bmp_error;
   status = ConvertBmpToGopBlt(
       (VOID*)fb,
       fi->FileSize,
       &gopBlt,
       &gopBltSz,
       &logoHeight,
-      &logoWidth );
+      &logoWidth,
+      &bmp_error);
 
+  if(EFI_ERROR(status))
+  {
+    printMsg(L"failed to convert BMP to BLT");
+    if(status == EFI_UNSUPPORTED) { printMsg(L"unsupported"); }
+    if(status == EFI_INVALID_PARAMETER) { printMsg(L"invalid parameter"); }
+    if(status == EFI_BUFFER_TOO_SMALL) { printMsg(L"why so stingy?"); }
 
+    if(bmp_error == BMP_BAD_CHAR) { printMsg(L"bmp: bad char"); }
+    if(bmp_error == BMP_NO_COMPRESSION) { printMsg(L"bmp: no compression"); }
+    if(bmp_error == BMP_BAD_HEADER) { printMsg(L"bmp: bad header"); }
+    return;
+  }
+  printMsg(L"converted bmp to blt");
 
-  ShellCloseFile(&fh);
+  UINT32 xoff = mode_width / 2 - logoWidth / 2,
+         yoff = mode_height / 2 - logoHeight / 2;
+  status = gop->Blt(
+      gop,
+      gopBlt,
+      EfiBltBufferToVideo,
+      0, 0,
+      xoff, yoff,
+      logoWidth, logoHeight,
+      0
+  );
+  if(EFI_ERROR(status))
+  {
+    printMsg(L"place image on screen");
+    return;
+  }
 
   printMsg(L"Deter QuickJump");
 }
 
 void run()
 {
-  printMsg(L"Entering run loop");
+  printMsg(L"node ready, awaiting allocation");
   BOOLEAN exit = FALSE;
   while(!exit)
   {
