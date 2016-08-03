@@ -18,13 +18,19 @@
 #include <Library/UefiLib.h>
 #include <stdio.h>
 
-#include <Library/UefiBootServicesTableLib.h>
 #include <FrameworkDxe.h>
+#include <Library/UefiBootServicesTableLib.h>
 #include <Library/DxeServicesLib.h>
+#include <Library/ShellLib.h>
+//#include <Library/BaseMemoryLib.h>
+#include <Library/MemoryAllocationLib.h>
+//#include <Library/GraphicsLib.h>
 
 #include <Protocol/GraphicsOutput.h>
 #include <Protocol/SimpleTextOut.h>
 #include <Protocol/UgaDraw.h>
+
+#include <Burgaler.h>
 
 void locateGraphics();
 void showLogo();
@@ -152,6 +158,7 @@ void showLogo()
 
   printMsg(L"getting logo from firmware");
   //get the deter logo from the firmware volume
+  /*
   UINT8 *ImageData;
   UINTN ImageSize;
   status = GetSectionFromAnyFv(
@@ -165,6 +172,58 @@ void showLogo()
     printMsg(L"could not read logo from firmware volume");
     return;
   }
+  */
+
+  //open logo file
+  SHELL_FILE_HANDLE fh;
+  status = ShellOpenFileByName(
+      L"deter.bmp",
+      &fh,
+      EFI_FILE_MODE_READ,
+      0 );
+
+  if(EFI_ERROR(status))
+  {
+    printMsg(L"could not open deter logo");
+    return;
+  }
+  printMsg(L"opened deter logo");
+
+  //allocate buffer for file
+  EFI_FILE_INFO *fi = ShellGetFileInfo(fh);
+  EFI_HANDLE *fb = AllocateZeroPool( (UINTN)fi->FileSize );
+  if(fb == NULL) {
+    printMsg(L"failed to allocate buffer for logo");
+    return;
+  }
+
+  //read logo file into buffer
+  UINTN fs = (UINTN) fi->FileSize;
+  status = ShellReadFile(fh, &fs, fb);
+  if(EFI_ERROR(status))
+  {
+    printMsg(L"failed to read logo file into buffer");
+    return;
+  }
+
+  printMsg(L"read logo file into buffer");
+
+  VOID *gopBlt = NULL;
+  UINTN gopBltSz = 0;
+  UINTN logoHeight = 0,
+        logoWidth = 0;
+
+  status = ConvertBmpToGopBlt(
+      (VOID*)fb,
+      fi->FileSize,
+      &gopBlt,
+      &gopBltSz,
+      &logoHeight,
+      &logoWidth );
+
+
+
+  ShellCloseFile(&fh);
 
   printMsg(L"Deter QuickJump");
 }

@@ -53,6 +53,7 @@
 
 
   FrameworkUefiLib|IntelFrameworkPkg/Library/FrameworkUefiLib/FrameworkUefiLib.inf
+  #BurgalerLib|DeterPkg/Library/Burgaler/Burgaler.inf
 
 [SkuIds]
   0|DEFAULT
@@ -61,5 +62,6 @@
 
 [Components]
   DeterPkg/Application/QuickJump/QuickJump.inf
+  #DeterPkg/Library/Burgaler/Burgaler.inf
 
 !include StdLib/StdLib.inc

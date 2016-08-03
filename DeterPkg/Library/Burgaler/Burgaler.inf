@@ -16,42 +16,16 @@
 
 [Defines]
   INF_VERSION                   = 0x00010006
-  BASE_NAME                     = QuickJump
-  MODULE_UNI_FILE               = QuickJump.uni
+  BASE_NAME                     = Burgaler
+  MODULE_UNI_FILE               = Burgaler.uni
   FILE_GUID                     = b415592e-561b-11e6-91ce-cfa5636ca62a
-  MODULE_TYPE                   = UEFI_APPLICATION
+  MODULE_TYPE                   = DXE_DRIVER
   VERSION_STRING                = 0.1
-  ENTRY_POINT                   = QuickJumpEntry
-
-  UEFI_HII_RESOURCE_SECTION     = TRUE
+  LIBRARY_CLASS                 = BurgalerLib|DXE_DRIVER DXE_RUNTIME_DRIVER UEFI_APPLICATION
 
 [Sources]
-  QuickJump.c
   Burgaler.c
 
 [Packages]
-  DeterPkg/DeterPkg.dec
-  MdePkg/MdePkg.dec
-  StdLib/StdLib.dec
-  ShellPkg/ShellPkg.dec
-  IntelFrameworkPkg/IntelFrameworkPkg.dec
-  EdkCompatibilityPkg/EdkCompatibilityPkg.dec
 
 [LibraryClasses]
-# UefiApplicationEntryPoint
-  UefiLib
-  LibC
-  Stdio
-  FrameworkUefiLib
-#  ShellCEntryLib
-  UefiBootServicesTableLib
-  DxeServicesLib
-#  BurgalerLib
-# DevShell
-# DxeServicesLib
-
-[Protocols]
-  gEfiGraphicsOutputProtocolGuid 
-
-[Pcd]
- gDeterPkgTokenSpaceGuid.PcdLogoFile 
