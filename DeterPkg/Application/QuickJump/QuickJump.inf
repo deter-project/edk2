@@ -35,13 +35,13 @@
   StdLib/StdLib.dec
   ShellPkg/ShellPkg.dec
   IntelFrameworkPkg/IntelFrameworkPkg.dec
-  EdkCompatibilityPkg/EdkCompatibilityPkg.dec
+#  EdkCompatibilityPkg/EdkCompatibilityPkg.dec
 
 [LibraryClasses]
-# UefiApplicationEntryPoint
+  UefiApplicationEntryPoint
   UefiLib
-  LibC
-  Stdio
+#  LibC
+#  Stdio
   FrameworkUefiLib
 #  ShellCEntryLib
   UefiBootServicesTableLib
@@ -52,6 +52,8 @@
 
 [Protocols]
   gEfiGraphicsOutputProtocolGuid 
+  gEfiMtftp4ProtocolGuid
+#  gEfiHttpProtocolGuid
 
 [Pcd]
  gDeterPkgTokenSpaceGuid.PcdLogoFile 

@@ -14,30 +14,14 @@
  *
  **/
 
-#include <Uefi.h>
-#include <Library/UefiLib.h>
-#include <stdio.h>
+#include "QuickJump.h"
 
-#include <FrameworkDxe.h>
-#include <Library/UefiBootServicesTableLib.h>
-#include <Library/DxeServicesLib.h>
-#include <Library/ShellLib.h>
-//#include <Library/BaseMemoryLib.h>
-#include <Library/MemoryAllocationLib.h>
-//#include <Library/GraphicsLib.h>
+///
+/// Global Variables
+/// 
+ 
+// Graphics  ~~~
 
-#include <Protocol/GraphicsOutput.h>
-#include <Protocol/SimpleTextOut.h>
-#include <Protocol/UgaDraw.h>
-
-#include <Burgaler.h>
-
-void locateGraphics();
-void maxRes();
-void showLogo();
-void run();
-void initTop();
-  
 EFI_GRAPHICS_OUTPUT_PROTOCOL  *gop = NULL;
 UINT32 mode_width = 0,
        mode_height = 0;
@@ -46,24 +30,46 @@ EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *top = NULL;
 UINTN text_cols = 0,
       text_rows = 0;
 
+// Networking ~~~
+
+EFI_MTFTP4_PROTOCOL *tftp = NULL;
+
+///
+/// Entry point
+///
+
 EFI_STATUS
 EFIAPI
 QuickJumpEntry(
     IN EFI_HANDLE ImageHandle,
     IN EFI_SYSTEM_TABLE *SystemTable )
 {
-  gST->ConOut->ClearScreen (gST->ConOut);
-  initTop();
-  locateGraphics();
-  maxRes();
-  showLogo();
-  run();
+  EFI_STATUS status = initGraphics();
+  if(EFI_ERROR(status)) return status;
 
+  status = initNetwork();
+  if(EFI_ERROR(status))
+  {
+    run(NULL);
+    return status;
+  }
+
+  status = showLogo();
+  if(EFI_ERROR(status))
+  {
+    run(NULL);
+    return status;
+  }
+
+  run(L"node ready, awaiting allocation");
   return EFI_SUCCESS;
 }
 
 
-int row = 1;
+///
+/// Utility Functions
+///
+
 void printMsg(const CHAR16 *msg)
 {
   UINTN sl = StrLen(msg);
@@ -71,46 +77,6 @@ void printMsg(const CHAR16 *msg)
   Print(L"                                                                  ");
   gST->ConOut->SetCursorPosition(gST->ConOut, text_cols/2 - sl/2 - 1, text_rows - 1);
   Print(msg);
-}
-
-void initTop()
-{
-  //get a handle to the simple text output protocol
-  EFI_STATUS status = gBS->HandleProtocol(
-      gST->ConsoleOutHandle,
-      &gEfiSimpleTextOutProtocolGuid,
-      (VOID**) &top);
-
-  if(EFI_ERROR(status)) 
-  {
-    printMsg(L"TOP not supported");
-    return;
-  }
-  printMsg(L"TOP initailized");
-}
-
-
-void locateGraphics()
-{
-  //printMsg(L"locating the gop\n");
-
-  EFI_STATUS status = gBS->LocateProtocol(
-      &gEfiGraphicsOutputProtocolGuid,
-      NULL,
-      (VOID**) &gop);
-  if(status == EFI_SUCCESS)
-  {
-    //printMsg(L"gop found, yay!\n");
-    //gop->SetMode(gop, gop->Mode->MaxMode);
-  }
-  else if(status == EFI_INVALID_PARAMETER)
-  {
-    //printMsg(L"invalid param\n");
-  }
-  else if(status == EFI_NOT_FOUND)
-  {
-    //printMsg(L"gop not found, :(\n");
-  }
 }
 
 void maxRes()
@@ -138,9 +104,62 @@ void maxRes()
   top->QueryMode(top, mode, &text_cols, &text_rows);
 }
 
-void showLogo()
-{
+///
+/// Graphics functions
+///
 
+EFI_STATUS initGraphics()
+{
+  gST->ConOut->ClearScreen (gST->ConOut);
+
+  EFI_STATUS status = initTop();
+  if(EFI_ERROR(status)) return status;
+
+  status = initGop();
+  if(EFI_ERROR(status)) return status;
+
+  //maxRes();
+  return status;
+}
+
+EFI_STATUS initTop()
+{
+  //get a handle to the simple text output protocol
+  EFI_STATUS status = gBS->HandleProtocol(
+      gST->ConsoleOutHandle,
+      &gEfiSimpleTextOutProtocolGuid,
+      (VOID**) &top);
+
+  if(EFI_ERROR(status)) return status;
+  
+  top->QueryMode(top, top->Mode->Mode, &text_cols, &text_rows);
+
+  return status;
+}
+
+
+EFI_STATUS initGop()
+{
+  //get a handle to the graphics output protocol
+  EFI_STATUS status = gBS->LocateProtocol(
+      &gEfiGraphicsOutputProtocolGuid,
+      NULL,
+      (VOID**) &gop);
+
+  if(EFI_ERROR(status)) 
+  {
+    printMsg(L"failed to initialize graphics");
+    return status;
+  }
+
+  mode_width = gop->Mode->Info->HorizontalResolution,
+  mode_height = gop->Mode->Info->VerticalResolution;
+
+  return status;
+}
+
+EFI_HANDLE* readLogoLocal(UINTN *fs)
+{
   //open logo file
   SHELL_FILE_HANDLE fh;
   EFI_STATUS status = ShellOpenFileByName(
@@ -152,7 +171,7 @@ void showLogo()
   if(EFI_ERROR(status))
   {
     printMsg(L"could not open deter logo");
-    return;
+    return NULL;
   }
   printMsg(L"opened deter logo");
 
@@ -161,20 +180,118 @@ void showLogo()
   EFI_HANDLE *fb = AllocateZeroPool( (UINTN)fi->FileSize );
   if(fb == NULL) {
     printMsg(L"failed to allocate buffer for logo");
-    return;
+    return NULL;
   }
 
   //read logo file into buffer
-  UINTN fs = (UINTN) fi->FileSize;
-  status = ShellReadFile(fh, &fs, fb);
+  *fs = (UINTN) fi->FileSize;
+  status = ShellReadFile(fh, fs, fb);
   if(EFI_ERROR(status))
   {
     printMsg(L"failed to read logo file into buffer");
-    return;
+    return NULL;
   }
 
   ShellCloseFile(&fh);
   printMsg(L"read logo file into buffer");
+
+  return fb;
+}
+
+EFIAPI
+EFI_STATUS
+tftp_timeout_cb( IN EFI_MTFTP4_PROTOCOL *this, IN EFI_MTFTP4_TOKEN *tok )
+{
+  printMsg(L"read logo: timeout");
+  return EFI_SUCCESS;
+}
+
+EFI_HANDLE* readLogoRemote(UINTN *fs)
+{
+  //init tftp token
+  EFI_MTFTP4_TOKEN tok;
+  tok.Event = NULL;
+  tok.Filename = (UINT8*)"deter.bmp";
+  tok.ModeStr = NULL;
+  tok.OptionCount = 0;
+  tok.BufferSize = 0;
+  tok.Buffer = NULL;
+  tok.Context = NULL;
+  tok.CheckPacket = NULL;
+  tok.TimeoutCallback = tftp_timeout_cb;
+  tok.PacketNeeded = NULL;
+  tok.OverrideData = NULL;
+
+  //get the remote file size
+  /*
+  EFI_STATUS status = tftp->ReadFile(tftp, &tok);
+  if(EFI_ERROR(status))
+  {
+    printMsg(L"failed to get logo file size over tftp");
+    return NULL;
+  }
+  */
+
+  //allocate buffer for file
+  printMsg(L"allocating logo buffer");
+  tok.BufferSize = 120054;
+  *fs = 120054;
+  EFI_HANDLE *fb = AllocateZeroPool( (UINTN)tok.BufferSize );
+  if(fb == NULL) {
+    printMsg(L"failed to allocate buffer for logo");
+    return NULL;
+  }
+  printMsg(L"logo buffer allocated");
+
+  printMsg(L"reading logo over network");
+  //read logo file into buffer over tftp
+  tok.Buffer = (VOID*)fb;
+  EFI_STATUS status = tftp->ReadFile(tftp, &tok);
+  if(EFI_ERROR(status))
+  {
+    switch(status)
+    {
+      case EFI_INVALID_PARAMETER: printMsg(L"read logo: invalid parameter"); break;
+      case EFI_UNSUPPORTED: printMsg(L"read logo: unsupported"); break;
+      case EFI_NOT_STARTED: printMsg(L"read logo: not started"); break;
+      case EFI_NO_MAPPING: printMsg(L"read logo: no mapping"); break;
+      case EFI_ALREADY_STARTED: printMsg(L"read logo: already started"); break;
+      case EFI_ACCESS_DENIED: printMsg(L"read logo: access denied"); break;
+      case EFI_OUT_OF_RESOURCES: printMsg(L"read logo: out of resources"); break;
+      case EFI_DEVICE_ERROR: printMsg(L"read logo: device error"); break;
+      default: printMsg(L"read logo: unknown error"); break;
+    }
+    return NULL;
+  }
+  if(EFI_ERROR(tok.Status))
+  {
+    switch(tok.Status)
+    {
+      case EFI_OUT_OF_RESOURCES: printMsg(L"read logo: out of resources"); break;
+      case EFI_BUFFER_TOO_SMALL: printMsg(L"read logo: buffer too small"); break;
+      case EFI_ABORTED: printMsg(L"read logo: aborted"); break;
+      case EFI_NETWORK_UNREACHABLE: printMsg(L"read logo: net unreach"); break;
+      case EFI_ICMP_ERROR: printMsg(L"read logo: icmp error"); break;
+      case EFI_TIMEOUT: printMsg(L"read logo: timeout"); break;
+      case EFI_TFTP_ERROR: printMsg(L"read logo: tftp error"); break;
+      case EFI_DEVICE_ERROR: printMsg(L"read logo: device error"); break;
+      case EFI_NO_MEDIA: printMsg(L"read logo: no media"); break;
+      default: printMsg(L"read logo: unknown error");
+    }
+    return NULL;
+  }
+  printMsg(L"logo read over network");
+
+  return fb;
+}
+
+EFI_STATUS showLogo()
+{
+
+  UINTN fs = 0;
+  //EFI_HANDLE *fb = readLogoLocal(&fs);
+  EFI_HANDLE *fb = readLogoRemote(&fs);
+  if(fb == NULL) return EFI_LOAD_ERROR;
 
   VOID *gopBlt = NULL;
   UINTN gopBltSz = 0;
@@ -182,9 +299,9 @@ void showLogo()
         logoWidth = 0;
 
   UINTN bmp_error;
-  status = ConvertBmpToGopBlt(
+  EFI_STATUS status = ConvertBmpToGopBlt(
       (VOID*)fb,
-      fi->FileSize,
+      fs,
       &gopBlt,
       &gopBltSz,
       &logoHeight,
@@ -201,7 +318,7 @@ void showLogo()
     if(bmp_error == BMP_BAD_CHAR) { printMsg(L"bmp: bad char"); }
     if(bmp_error == BMP_NO_COMPRESSION) { printMsg(L"bmp: no compression"); }
     if(bmp_error == BMP_BAD_HEADER) { printMsg(L"bmp: bad header"); }
-    return;
+    return status;
   }
   printMsg(L"converted bmp to blt");
 
@@ -219,15 +336,96 @@ void showLogo()
   if(EFI_ERROR(status))
   {
     printMsg(L"place image on screen");
-    return;
+    return status;
   }
 
   printMsg(L"Deter QuickJump");
+  return EFI_SUCCESS;
 }
 
-void run()
+///
+/// Network Functions
+///
+
+EFI_STATUS initNetwork()
 {
-  printMsg(L"node ready, awaiting allocation");
+  EFI_STATUS status = initTftp();
+  
+  return status;
+}
+
+EFI_STATUS initTftp()
+{
+  EFI_STATUS status = gBS->LocateProtocol(
+      &gEfiMtftp4ProtocolGuid,
+      NULL,
+      (VOID**) &tftp);
+
+  if(EFI_ERROR(status))
+  {
+    switch(status)
+    {
+      case EFI_NOT_FOUND: printMsg(L"locate tftp: not found"); break;
+      case EFI_INVALID_PARAMETER: printMsg(L"locate tftp: invalid param"); break;
+      default: printMsg(L"locate tftp: unknown failure");
+    }
+    return status;
+  }
+
+  EFI_MTFTP4_CONFIG_DATA cfg;
+  cfg.UseDefaultSetting = TRUE;
+
+  cfg.StationIp.Addr[0] = 10;
+  cfg.StationIp.Addr[1] = 0;
+  cfg.StationIp.Addr[2] = 0;
+  cfg.StationIp.Addr[3] = 19;
+
+  cfg.SubnetMask.Addr[0] = 255;
+  cfg.SubnetMask.Addr[1] = 255;
+  cfg.SubnetMask.Addr[2] = 255;
+  cfg.SubnetMask.Addr[3] = 0;
+
+  cfg.GatewayIp.Addr[0] = 10;
+  cfg.GatewayIp.Addr[1] = 0;
+  cfg.GatewayIp.Addr[2] = 0;
+  cfg.GatewayIp.Addr[3] = 1;
+
+  cfg.ServerIp.Addr[0] = 10;
+  cfg.ServerIp.Addr[1] = 0;
+  cfg.ServerIp.Addr[2] = 0;
+  cfg.ServerIp.Addr[3] = 1;
+  cfg.LocalPort = 0;
+  cfg.InitialServerPort = 69;
+  cfg.TryCount = 4;
+  cfg.TimeoutValue = 7;
+
+  status = tftp->Configure(tftp, &cfg);
+  if(EFI_ERROR(status))
+  {
+    switch(status)
+    {
+      case EFI_INVALID_PARAMETER: printMsg(L"tftp: invalid parameter"); break;
+      case EFI_ACCESS_DENIED: printMsg(L"tftp: access denied"); break;
+      case EFI_NO_MAPPING: printMsg(L"tftp: no mapping"); break;
+      case EFI_UNSUPPORTED: printMsg(L"tftp: unsupported"); break;
+      case EFI_OUT_OF_RESOURCES: printMsg(L"tftp: out of resources"); break;
+      case EFI_DEVICE_ERROR: printMsg(L"tftp: device error"); break;
+      default: printMsg(L"tftp: unknown error");
+    }
+    return status;
+  }
+
+  return EFI_SUCCESS;
+}
+
+///
+/// Runtime Functions
+///
+
+void run(CHAR16 *msg)
+{
+  if(msg != NULL) printMsg(msg);
+
   BOOLEAN exit = FALSE;
   while(!exit)
   {
