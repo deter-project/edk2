@@ -375,10 +375,12 @@ EFI_STATUS initTftp()
   EFI_MTFTP4_CONFIG_DATA cfg;
   cfg.UseDefaultSetting = TRUE;
 
+  //this needs to be set to a valid ip address for supermicro boards
+  //although it really dosen't matter what thet address actually is
   cfg.StationIp.Addr[0] = 10;
   cfg.StationIp.Addr[1] = 0;
   cfg.StationIp.Addr[2] = 0;
-  cfg.StationIp.Addr[3] = 19;
+  cfg.StationIp.Addr[3] = 1;
 
   cfg.SubnetMask.Addr[0] = 255;
   cfg.SubnetMask.Addr[1] = 255;
